@@ -2,6 +2,7 @@ import sqlite3
 import os
 from datetime import datetime
 
+# Path to SQLite DB, default is court_queries.db if not set in environment
 DB_PATH = os.getenv("DB_PATH", "court_queries.db")
 
 def init_db():
@@ -44,5 +45,13 @@ def log_query(case_type, case_number, filing_year, result):
         ))
         conn.commit()
 
-# Call this once on app start
+def get_all_queries():
+    """Fetch all logged queries from the database."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM queries ORDER BY query_time DESC")
+        rows = cursor.fetchall()
+    return rows
+
+# Initialize the database on module load
 init_db()
