@@ -24,10 +24,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
-# Enable logging
 logging.basicConfig(level=logging.INFO)
 
-# CSRF token management
 def generate_csrf_token():
     if "_csrf_token" not in session:
         session["_csrf_token"] = secrets.token_urlsafe(16)
@@ -35,7 +33,6 @@ def generate_csrf_token():
 
 app.jinja_env.globals["csrf_token"] = generate_csrf_token
 
-# 🏠 Home & Search Page
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -55,6 +52,10 @@ def index():
 
         try:
             result = fetch_case_details(case_type, case_number, filing_year, captcha_token)
+
+            if not result:
+                flash("No data found for the given case.")
+                return redirect(url_for("index"))
 
             next_hearing = result.get("next_hearing")
             if next_hearing:
@@ -76,7 +77,6 @@ def index():
 
     return render_template("index.html")
 
-# 📜 History Page
 @app.route("/history")
 def history():
     try:
@@ -87,7 +87,6 @@ def history():
         flash("Could not load history.")
         return redirect(url_for("index"))
 
-# 📄 PDF Download
 @app.route("/download-pdf", methods=["POST"])
 def download_pdf():
     form_token = request.form.get("_csrf_token")
@@ -99,7 +98,7 @@ def download_pdf():
         data = json.loads(request.form.get("data", "{}"))
         html_content = render_template("result.html", result=data)
 
-        # Remove button/form elements from PDF
+        # Consider using @media print to hide buttons in CSS instead
         html_content = html_content.replace("<form", "<!--form").replace("</form>", "</form-->")
 
         result_pdf = BytesIO()
@@ -115,6 +114,5 @@ def download_pdf():
         flash("Could not generate PDF.")
         return redirect(url_for("index"))
 
-# 🔓 Start App
 if __name__ == "__main__":
     app.run(debug=True)
