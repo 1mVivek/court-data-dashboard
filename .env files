@@ -1,7 +1,0 @@
-# .env
-
-# Flask Secret Key for sessions and CSRF protection
-SECRET_KEY=e3b1233ddc7b7e3e4d5e11f2d8f0c67cd9a304ec5cfbb5c672f1baf9e204e17f
-
-# Optional: Add other secrets like API keys if needed later
-# CAPTCHA_API_KEY=your_captcha_key_here
