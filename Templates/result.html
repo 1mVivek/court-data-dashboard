@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Case Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .field {
+            margin-bottom: 12px;
+        }
+        .label {
+            font-weight: bold;
+        }
+        .value {
+            margin-left: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        .upcoming {
+            background-color: #28a745;
+            color: white;
+        }
+        .no-date {
+            background-color: #dc3545;
+            color: white;
+        }
+        .expired {
+            background-color: orange;
+            color: white;
+        }
+        .btn-link {
+            display: inline-block;
+            margin-top: 15px;
+            margin-right: 10px;
+            padding: 8px 16px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Case Details</h1>
+
+    <div class="field">
+        <span class="label">Parties:</span>
+        <span class="value">{{ result.parties or "N/A" }}</span>
+    </div>
+
+    <div class="field">
+        <span class="label">Filing Date:</span>
+        <span class="value">{{ result.filing_date or "N/A" }}</span>
+    </div>
+
+    <div class="field">
+        <span class="label">Next Hearing:</span>
+        <span class="value">
+            {{ result.next_hearing or "N/A" }}
+            {% if result.hearing_status == "upcoming" %}
+                <span class="badge upcoming">Upcoming</span>
+            {% elif result.hearing_status == "expired" %}
+                <span class="badge expired">Expired</span>
+            {% else %}
+                <span class="badge no-date">No Future Date</span>
+            {% endif %}
+        </span>
+    </div>
+
+    {% if result.pdf_url %}
+        <a class="btn-link" href="{{ result.pdf_url }}" target="_blank">🔗 View PDF</a>
+        <a class="btn-link" href="{{ result.pdf_url }}" download>⬇️ Download PDF</a>
+    {% endif %}
+
+    <hr>
+    <a class="btn-link" href="/">🔍 New Search</a>
+    <a class="btn-link" href="/history">📜 View History</a>
+</body>
+</html>
