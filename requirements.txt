@@ -21,3 +21,4 @@ gunicorn==21.2.0
 # For HTML sanitization and safe rendering
 MarkupSafe==2.1.5
 xhtml2pdf==0.2.15
+playwright 
