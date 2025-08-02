@@ -1,26 +1,30 @@
-from flask import Flask, render_template, request
-from scraper import fetch_case_details
-from storage import log_query
-import os
+from flask import make_response
+from xhtml2pdf import pisa
+from io import BytesIO
+import json
 
-app = Flask(__name__)  # ⬅️ FIXED: Use __name__, not name
+@app.route("/download-pdf", methods=["POST"])
+def download_pdf():
+    form_token = request.form.get("_csrf_token")
+    if not form_token or form_token != session.get("_csrf_token"):
+        flash("Invalid CSRF token. Refresh and try again.")
+        return redirect(url_for('index'))
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        case_type = request.form["case_type"]
-        case_number = request.form["case_number"]
-        filing_year = request.form["filing_year"]
-        captcha_token = request.form.get("captcha_token")  # Optional field
+    try:
+        data = json.loads(request.form.get("data", "{}"))
+        html_content = render_template("result.html", result=data)
+        
+        # Remove buttons from PDF
+        html_content = html_content.replace('<form', '<!--form').replace('</form>', '</form-->')
 
-        try:
-            result = fetch_case_details(case_type, case_number, filing_year, captcha_token)
-            log_query(case_type, case_number, filing_year, result)
-            return render_template("result.html", result=result)
-        except Exception as e:
-            return render_template("index.html", error=str(e))
+        result_pdf = BytesIO()
+        pisa.CreatePDF(BytesIO(html_content.encode("utf-8")), dest=result_pdf)
+        response = make_response(result_pdf.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=case_details.pdf"
+        response.headers["Content-Type"] = "application/pdf"
+        return response
 
-    return render_template("index.html")
-
-if __name__ == "__main__":  # ⬅️ FIXED: __name__ and "__main__"
-    app.run(debug=True)
+    except Exception as e:
+        logging.exception("PDF generation error")
+        flash("Could not generate PDF.")
+        return redirect(url_for("index"))
