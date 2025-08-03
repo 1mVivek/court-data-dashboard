@@ -1,24 +1,7 @@
-# Web framework
-Flask==3.0.3
-
-# Environment variable loading
-python-dotenv==1.0.1
-
-# HTTP requests and parsing
-requests==2.31.0
-beautifulsoup4==4.12.3
-
-# WSGI middleware (used for secure deployments)
-Werkzeug==3.0.1
-
-# Optional for deployment (e.g., on Render/Railway/Heroku)
-gunicorn==21.2.0
-
-# If you're using SQLite and `storage.py` interacts with it
-# (Optional: if you use SQLAlchemy instead of raw sqlite3)
-# SQLAlchemy==2.0.30
-
-# For HTML sanitization and safe rendering
-MarkupSafe==2.1.5
-xhtml2pdf==0.2.15
-playwright 
+Flask>=2.3.0
+python-dotenv
+Werkzeug>=2.3.0
+xhtml2pdf
+playwright
+beautifulsoup4
+requests
