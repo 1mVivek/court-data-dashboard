@@ -1,43 +1,35 @@
-<!-- templates/result.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Case Result</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta charset="UTF-8" />
+  <title>Case Details</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
 </head>
-<body>
-    <div class="container">
-        <h1>📄 Case Details</h1>
+<body class="bg-white">
+  <div class="container py-4">
+    <h2 class="mb-4">Case Result</h2>
 
-        <div class="status">
-            {% if result.hearing_status == "upcoming" %}
-                <span class="badge upcoming">Upcoming Hearing</span>
-            {% elif result.hearing_status == "expired" %}
-                <span class="badge expired">Past Hearing</span>
-            {% else %}
-                <span class="badge none">No Hearing Date</span>
-            {% endif %}
-        </div>
+    <ul class="list-group mb-3">
+      <li class="list-group-item"><strong>Parties:</strong> {{ result.parties }}</li>
+      <li class="list-group-item"><strong>Filing Date:</strong> {{ result.filing_date }}</li>
+      <li class="list-group-item"><strong>Next Hearing:</strong> {{ result.next_hearing or 'N/A' }}</li>
+      <li class="list-group-item"><strong>Status:</strong> {{ result.hearing_status }}</li>
+      {% if result.pdf_url %}
+        <li class="list-group-item"><strong>Judgment PDF:</strong>
+          <a href="{{ result.pdf_url }}" target="_blank">View PDF</a>
+        </li>
+      {% endif %}
+    </ul>
 
-        <div class="details">
-            <p><strong>Case Type:</strong> {{ result.case_type }}</p>
-            <p><strong>Case Number:</strong> {{ result.case_number }}</p>
-            <p><strong>Filing Year:</strong> {{ result.filing_year }}</p>
-            <p><strong>Petitioner:</strong> {{ result.petitioner }}</p>
-            <p><strong>Respondent:</strong> {{ result.respondent }}</p>
-            <p><strong>Status:</strong> {{ result.status }}</p>
-            <p><strong>Next Hearing:</strong> {{ result.next_hearing or "Not Available" }}</p>
-            <p><strong>Judge:</strong> {{ result.judge or "N/A" }}</p>
-        </div>
+    <form method="POST" action="{{ url_for('download_pdf') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="data" value="{{ result | tojson }}">
+      <button type="submit" class="btn btn-success">Download PDF</button>
+    </form>
 
-        <form action="{{ url_for('download_pdf') }}" method="POST">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="data" value="{{ result | tojson | safe }}">
-            <button type="submit" class="btn-download">⬇️ Download as PDF</button>
-        </form>
-
-        <a href="{{ url_for('index') }}" class="back-btn">🔙 Search Again</a>
+    <div class="mt-3">
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Back</a>
     </div>
+  </div>
 </body>
 </html>
