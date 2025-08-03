@@ -1,60 +1,66 @@
-# storage.py
 import os
 import json
-import sqlite3
 from datetime import datetime
 
-DB_PATH = os.getenv("DB_PATH", "queries.db")
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS queries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                case_type TEXT,
-                case_number TEXT,
-                filing_year TEXT,
-                result_json TEXT,
-                timestamp TEXT
-            )
-        """)
-        conn.commit()
+from dotenv import load_dotenv
+load_dotenv()
+
+# Set up PostgreSQL connection
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///queries.db")  # fallback to SQLite for local/dev
+
+engine = create_engine(DATABASE_URL, echo=False)
+Session = sessionmaker(bind=engine)
+Base = declarative_base()
+
+class CaseQuery(Base):
+    __tablename__ = "case_queries"
+
+    id = Column(Integer, primary_key=True)
+    case_type = Column(String)
+    case_number = Column(String)
+    filing_year = Column(String)
+    result = Column(JSON)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+# Create tables if not exist
+Base.metadata.create_all(engine)
 
 def log_query(case_type, case_number, filing_year, result):
-    init_db()
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT INTO queries (case_type, case_number, filing_year, result_json, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            case_type,
-            case_number,
-            filing_year,
-            json.dumps(result),
-            datetime.now().isoformat()
-        ))
-        conn.commit()
+    """Log a query to the database."""
+    session = Session()
+    try:
+        new_query = CaseQuery(
+            case_type=case_type,
+            case_number=case_number,
+            filing_year=filing_year,
+            result=result
+        )
+        session.add(new_query)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
 
 def get_all_queries():
-    init_db()
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT case_type, case_number, filing_year, result_json, timestamp
-            FROM queries
-            ORDER BY id DESC
-        """)
-        rows = cursor.fetchall()
-
-    # Convert to list of dicts
-    queries = []
-    for row in rows:
-        result_data = json.loads(row[3])
-        queries.append({
-            "case_type": row[0],
-            "case_number": row[1],
-            "filing_year": row[2],
-            "result": result_data,
-            "timestamp": row[4]
-        })
-
-    return queries
+    """Retrieve all logged queries, sorted by newest first."""
+    session = Session()
+    try:
+        queries = session.query(CaseQuery).order_by(CaseQuery.timestamp.desc()).all()
+        return [
+            {
+                "case_type": q.case_type,
+                "case_number": q.case_number,
+                "filing_year": q.filing_year,
+                "result": q.result,
+                "timestamp": q.timestamp.isoformat()
+            }
+            for q in queries
+        ]
+    finally:
+        session.close()
