@@ -5,3 +5,5 @@ xhtml2pdf
 playwright
 beautifulsoup4
 requests
+SQLAlchemy
+psycopg2-binary
