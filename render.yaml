@@ -11,6 +11,7 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn main:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz  # Optional, if you add that route
     envVars:
       - key: SECRET_KEY
         fromDotEnv: true
