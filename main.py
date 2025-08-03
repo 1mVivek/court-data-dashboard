@@ -1,3 +1,4 @@
+# main.py
 import os
 import json
 import html
@@ -17,7 +18,6 @@ from dotenv import load_dotenv
 from scraper import fetch_case_details
 from storage import log_query, get_all_queries
 
-# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -44,14 +44,13 @@ def index():
         case_type = html.escape(request.form.get("case_type", "").strip())
         case_number = html.escape(request.form.get("case_number", "").strip())
         filing_year = html.escape(request.form.get("filing_year", "").strip())
-        captcha_token = html.escape(request.form.get("captcha_token", "").strip())
 
         if not all([case_type, case_number, filing_year]):
             flash("All fields are required.")
             return redirect(url_for("index"))
 
         try:
-            result = fetch_case_details(case_type, case_number, filing_year, captcha_token)
+            result = fetch_case_details(case_type, case_number, filing_year)
 
             if not result:
                 flash("No data found for the given case.")
@@ -97,9 +96,6 @@ def download_pdf():
     try:
         data = json.loads(request.form.get("data", "{}"))
         html_content = render_template("result.html", result=data)
-
-        # Consider using @media print to hide buttons in CSS instead
-        html_content = html_content.replace("<form", "<!--form").replace("</form>", "</form-->")
 
         result_pdf = BytesIO()
         pisa.CreatePDF(BytesIO(html_content.encode("utf-8")), dest=result_pdf)
