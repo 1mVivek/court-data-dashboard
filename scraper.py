@@ -1,58 +1,81 @@
 import time
+import os
+import base64
+import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-def fetch_case_details(case_type, case_number, filing_year, captcha_token=None):
-    """
-    Scrapes Delhi High Court case data using Playwright (headless browser).
-    CAPTCHA token must be manually obtained from the user.
-    """
+CAPSOLVER_API_KEY = os.getenv("CAPSOLVER_API_KEY")
+
+def solve_captcha(image_base64):
+    url = "https://api.capsolver.com/createTask"
+    payload = {
+        "clientKey": CAPSOLVER_API_KEY,
+        "task": {
+            "type": "ImageToTextTask",
+            "body": image_base64
+        }
+    }
+    response = requests.post(url, json=payload).json()
+    
+    if response.get("errorId", 0) != 0:
+        raise Exception(f"CapSolver error: {response.get('errorDescription')}")
+
+    task_id = response.get("taskId")
+
+    # Polling result
+    while True:
+        res = requests.post("https://api.capsolver.com/getTaskResult", json={
+            "clientKey": CAPSOLVER_API_KEY,
+            "taskId": task_id
+        }).json()
+
+        if res.get("status") == "ready":
+            return res["solution"]["text"]
+
+        time.sleep(2)
+
+def fetch_case_details(case_type, case_number, filing_year):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-
         try:
-            # Visit the Delhi High Court case status page
-            url = "https://delhihighcourt.nic.in/casestatus"
-            page.goto(url, timeout=20000)
+            page.goto("https://delhihighcourt.nic.in/casestatus", timeout=20000)
             page.wait_for_load_state("load")
 
-            # Fill the case search form
+            # Capture captcha
+            captcha = page.locator("#imgCaptcha")
+            captcha_screenshot = captcha.screenshot()
+            image_base64 = base64.b64encode(captcha_screenshot).decode("utf-8")
+
+            captcha_text = solve_captcha(image_base64)
+
+            # Fill form
             page.select_option("#ddlCaseType", case_type)
             page.fill("#txtCaseNo", case_number)
             page.fill("#txtCaseYear", filing_year)
-
-            # CAPTCHA token required
-            if not captcha_token:
-                raise ValueError("CAPTCHA token is required for Delhi High Court.")
-            page.fill("#txtCaptcha", captcha_token)
-
-            # Click the Search button
+            page.fill("#txtCaptcha", captcha_text)
             page.click("#btnSearch")
             page.wait_for_timeout(5000)
 
-            # Get page content and parse it
             html = page.content()
             soup = BeautifulSoup(html, "html.parser")
 
-            # Extracting details
             parties = soup.select_one("#lblParties")
             filing_date = soup.select_one("#lblFilingDate")
             next_hearing = soup.select_one("#lblNextDate")
             pdf_link = soup.find("a", string="Click here for judgment")
 
-            result = {
+            return {
                 "parties": parties.text.strip() if parties else "N/A",
                 "filing_date": filing_date.text.strip() if filing_date else "N/A",
                 "next_hearing": next_hearing.text.strip() if next_hearing else "N/A",
                 "pdf_url": pdf_link["href"] if pdf_link else None
             }
 
-            return result
-
         except PlaywrightTimeout:
-            raise RuntimeError("Page took too long to load or form failed to submit.")
+            raise RuntimeError("Timeout during scraping.")
         except Exception as e:
-            raise RuntimeError(f"Error scraping court data: {e}")
+            raise RuntimeError(f"Scraper error: {e}")
         finally:
             browser.close()
